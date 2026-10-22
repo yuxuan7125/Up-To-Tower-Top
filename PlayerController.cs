@@ -7,14 +7,18 @@ public class PlayerController : MonoBehaviour
     Rigidbody rb;
 
     bool isGrounded;
+    bool jumpRequested;
+    bool moveRequested;
+    float moveInput;
+
 
     [Header("Movement")]
     public Vector3 center = new Vector3(0, 0, 0);
     public float radius = 3;
     public float moveSpeed = 1;
-    public float startAngle = -90;   // 角度
     float curAngle;   // 弧度
     public float jumpForce = 5;
+    public float inwardStrength = 0.1f;
 
     [Header("Ground Detection")]
     public float maxGroundAngle = 45f;
@@ -28,7 +32,6 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         Debug.Log("遊戲開始");
-        curAngle = startAngle * Mathf.PI / 180f;
     }
     private void Awake()
     {
@@ -49,28 +52,51 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         // 讀取左右移動輸入
-        float moveInput = inputActions.Player.Move.ReadValue<float>();
-
-        if (moveInput != 0)
+        moveInput = inputActions.Player.Move.ReadValue<float>();
+        if (moveInput!=0)
         {
-            // 更新圓周角度
-            float nextAngle = curAngle + moveInput * moveSpeed * Time.deltaTime;
-
-            if (CanMove(nextAngle, moveInput)) { curAngle = nextAngle; }
-
-            // 計算下一個圓周位置
-            float x = center.x + radius * Mathf.Cos(curAngle);
-            float z = center.z + radius * Mathf.Sin(curAngle);
-
-            // 移動 Rigidbody
-            rb.MovePosition(new Vector3(x, rb.position.y, z));
+            moveRequested = true;
         }
 
         // 按下跳躍鍵，而且目前可以跳躍
         if (inputActions.Player.Jump.WasPressedThisFrame() && isGrounded)
         {
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+            jumpRequested = true;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        //移動判斷
+        if (moveRequested)
+        {
+            moveRequested = false;
+
+            //修正當前軌道
+            rb.linearVelocity = new Vector3((rb.linearVelocity.x - (rb.position.x-center.x)*inwardStrength) , rb.linearVelocity.y, (rb.linearVelocity.z) - (rb.position.z - center.z)*inwardStrength);
+
+            // 計算當前弧度
+            float curAngle = Mathf.Atan2((transform.position.z - center.z), (transform.position.x - center.x));
+            float nextAngle = curAngle + moveInput * moveSpeed * Time.fixedDeltaTime;
+
+            //判斷是否可以移動
+            if (CanMove(nextAngle, moveInput))
+            {
+                // 計算下一個位置需移動之距離
+                float deltaX = radius * (Mathf.Cos(nextAngle) - Mathf.Cos(curAngle));
+                float deltaZ = radius * (Mathf.Sin(nextAngle) - Mathf.Sin(curAngle));
+
+                // 移動
+                rb.MovePosition(rb.position + new Vector3(deltaX, 0, deltaZ));
+            }
+        }
+
+        //跳躍判斷
+        if(jumpRequested)
+        {
+            jumpRequested = false;
             isGrounded = false;
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
         }
     }
 
@@ -95,8 +121,17 @@ public class PlayerController : MonoBehaviour
     bool CanMove(float nextAngle, float moveInput)
     {
         Vector3 origin = transform.position + Vector3.up * rayHeight;
-        Vector3 direction = new Vector3(-Mathf.Sin(nextAngle), 0, Mathf.Cos(nextAngle)) * Mathf.Sign(moveInput);
+
+        Vector3 direction = new Vector3(
+            -Mathf.Sin(nextAngle),
+            0,
+            Mathf.Cos(nextAngle)
+        ) * Mathf.Sign(moveInput);
+
         float distance = transform.localScale.x / 2 + rayDistance;
-        return !Physics.Raycast(origin, direction, distance);
+
+        bool hit = Physics.Raycast(origin, direction, distance);
+
+        return !hit;
     }
 }
