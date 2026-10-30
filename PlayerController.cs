@@ -15,17 +15,17 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement")]
     public Vector3 center = new Vector3(0, 0, 0);
-    public float radius = 3;
-    public float moveSpeed = 1;
+    public float radius = 5;
+    public float moveSpeed = 3;
     public float curAngle;   // 弧度
-    public float jumpForce = 5;
+    public float jumpForce = 20;
     public float inwardStrength = 0.1f;
 
     [Header("Ground Detection")]
     public float maxGroundAngle = 45f;
 
     [Header("Hit Obstacle")]
-    public float rayDistance = 0.1f;
+    public float rayDistance = 0.2f;
     public float rayHeight = 0.1f;
 
 
@@ -55,10 +55,6 @@ public class PlayerController : MonoBehaviour
     {
         // 移動判斷
         moveInput = inputActions.Player.Move.ReadValue<float>();
-        if (moveInput!=0)
-        {
-            moveRequested = true;
-        }
 
         // 跳躍判斷
         if (inputActions.Player.Jump.WasPressedThisFrame() && isGrounded)
@@ -75,20 +71,17 @@ public class PlayerController : MonoBehaviour
             isOffTrack = true;
         }
 
-        // 
-        transform.rotation = Quaternion.Euler(transform.rotation.x, -curAngle * Mathf.Rad2Deg, transform.rotation.z);
     }
 
     private void FixedUpdate()
     {
 
         // 計算當前弧度
-        curAngle = Mathf.Atan2((transform.position.z - center.z), (transform.position.x - center.x));
+        curAngle = Mathf.Atan2((rb.position.z - center.z), (rb.position.x - center.x));
 
         //移動請求
-        if (moveRequested)
+        if (moveInput != 0)
         {
-            moveRequested = false;
             float nextAngle = curAngle + moveInput * moveSpeed * Time.fixedDeltaTime;
 
             //判斷是否可以移動
@@ -139,7 +132,7 @@ public class PlayerController : MonoBehaviour
 
     bool CanMove(float nextAngle, float moveInput)
     {
-        Vector3 origin = transform.position + Vector3.up * rayHeight;
+        Vector3 origin = rb.position + Vector3.up * rayHeight;
 
         Vector3 direction = new Vector3(
             -Mathf.Sin(nextAngle),
