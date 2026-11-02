@@ -8,14 +8,13 @@ public class PlayerController : MonoBehaviour
 
     bool isGrounded;
     bool jumpRequested = false;
-    bool moveRequested = false;
     float moveInput;
     bool isOffTrack = false;
 
 
     [Header("Movement")]
     public Vector3 center = new Vector3(0, 0, 0);
-    public float radius = 5;
+    public float radius = 10;
     public float moveSpeed = 3;
     public float curAngle;   // 弧度
     public float jumpForce = 20;
